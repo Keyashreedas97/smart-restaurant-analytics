@@ -284,8 +284,10 @@ def seed_data():
     db.session.commit()
 
 with app.app_context():
+    try:
     db.create_all()
-    seed_data()
+except Exception as e:
+print("DB init error:",e)
 
 if __name__ == "__main__":
     import os
