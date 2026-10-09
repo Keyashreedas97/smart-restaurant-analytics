@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block content %}
+<h2 class="fw-bold">Advanced Service Analytics</h2><p class="text-muted">ASMA layer: descriptive statistics, correlations, trends and decision support.</p>
+<div class="row g-4"><div class="col-lg-8"><div class="card p-3"><h5>Dimension Scores</h5><canvas id="a"></canvas></div></div>
+<div class="col-lg-4"><div class="card p-3"><h5>Correlation with Overall Rating</h5>{% for k,v in stats.correlations.items() %}<div class="d-flex justify-content-between border-bottom py-2"><span>{{k.title()}}</span><b>{{v}}</b></div>{% endfor %}</div></div></div>
+<div class="card p-4 mt-4"><h5>Management Recommendations</h5>{% for r in recs %}<div class="alert alert-warning">{{r}}</div>{% endfor %}</div>
+<div class="card p-3 mt-4"><h5>Branch Performance</h5><table class="table"><thead><tr><th>Branch ID</th><th>Rating</th><th>Reviews</th><th>Status</th></tr></thead><tbody>{% for b in stats.branches %}<tr><td>{{b.restaurant_id}}</td><td>⭐ {{b.rating}}</td><td>{{b.reviews}}</td><td>{% if b.rating>=4 %}<span class="badge bg-success">Excellent</span>{% elif b.rating>=3 %}<span class="badge bg-warning text-dark">Needs Attention</span>{% else %}<span class="badge bg-danger">Critical</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}{% block scripts %}<script>const s={{stats|tojson}};new Chart(document.getElementById('a'),{type:'radar',data:{labels:Object.keys(s.dimensions),datasets:[{label:'Performance',data:Object.values(s.dimensions)}]},options:{scales:{r:{min:0,max:5}}}});</script>{% endblock %}

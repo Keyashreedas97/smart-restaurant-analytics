@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block content %}
+<div class="hero p-5 rounded-4 shadow-sm mt-4"><div class="row align-items-center">
+<div class="col-lg-8"><span class="badge bg-primary mb-3">Enterprise Decision Support</span>
+<h1 class="display-5 fw-bold">Smart Restaurant Review & Service Analytics System</h1>
+<p class="lead">Turn customer reviews and service data into measurable insights, KPIs and actionable management decisions.</p>
+<a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Open Project</a></div>
+<div class="col-lg-4"><div class="glass p-4"><h5>Integrated Subjects</h5><p>📋 ITPM</p><p>🏢 Enterprise Systems</p><p>📊 ASMA / Analytics</p><hr><small>Flask • SQLite • Python • Chart.js</small></div></div>
+</div></div>
+<div class="row g-4 mt-3">
+{% for title,txt in [('Review Intelligence','Capture food, service, ambience, cleanliness and speed ratings.'),('Analytics','Analyze trends, sentiment, KPIs and branch performance.'),('Decision Support','Generate recommendations for managers based on data.') ] %}
+<div class="col-md-4"><div class="card h-100 p-3"><div class="card-body"><h4>{{ title }}</h4><p>{{ txt }}</p></div></div></div>
+{% endfor %}</div>{% endblock %}
