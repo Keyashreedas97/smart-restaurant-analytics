@@ -1,0 +1,17 @@
+SMART RESTAURANT ANALYTICS - PYTHON 3.14
+
+This version is prepared for Python 3.14.
+
+After extracting this folder, open CMD here and run:
+
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+
+Then open http://127.0.0.1:5000 in Chrome.
+
+Demo accounts:
+Admin: admin@smartrest.com / admin123
+Manager: manager@smartrest.com / manager123
+Customer: customer@smartrest.com / customer123
