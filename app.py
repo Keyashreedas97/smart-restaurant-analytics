@@ -283,12 +283,12 @@ def seed_data():
                               created_at=datetime.utcnow()-timedelta(days=random.randint(0,120))))
     db.session.commit()
 
-with app.app_context():
+ with app.app_context():
     try:
     db.create_all()
 except Exception as e:
-print("DB init error:",e)
-app = app
+print("DB initialization info:",e)
+
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT",5000))
