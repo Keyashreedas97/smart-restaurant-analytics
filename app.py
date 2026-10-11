@@ -4,13 +4,37 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from functools import wraps
 import os, csv, io, statistics, re
+import random
 
 from analytics.engine import analyze_reviews, build_recommendations
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "smart-restaurant-pbl-secret")
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///restaurant.db"
+
+# Local development uses SQLite. On Render, set DATABASE_URL to the Neon
+# PostgreSQL connection string in the service's environment variables.
+database_url = os.environ.get("DATABASE_URL", "").strip()
+if database_url.startswith("postgres://"):
+    database_url = "postgresql://" + database_url[len("postgres://"):]
+if database_url.startswith("postgresql://"):
+    # Use Psycopg 3, which is installed by requirements.txt.
+    database_url = "postgresql+psycopg://" + database_url[len("postgresql://"):]
+
+secret_key = os.environ.get("SECRET_KEY")
+if not secret_key:
+    if database_url:
+        raise RuntimeError(
+            "SECRET_KEY must be set in the hosting environment before deployment."
+        )
+    # Development-only fallback; never use this key on a public deployment.
+    secret_key = "local-development-only-change-me"
+
+app.config["SECRET_KEY"] = secret_key
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///restaurant.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = bool(database_url)
 db = SQLAlchemy(app)
 
 class User(db.Model):
@@ -237,9 +261,28 @@ def report_pdf():
 def seed_data():
     if User.query.first():
         return
-    admin = User(name="System Admin", email="admin@smartrest.com", password_hash=generate_password_hash("admin123"), role="admin")
-    manager = User(name="Restaurant Manager", email="manager@smartrest.com", password_hash=generate_password_hash("manager123"), role="manager")
-    customer = User(name="Demo Customer", email="customer@smartrest.com", password_hash=generate_password_hash("customer123"), role="customer")
+
+    # Local demo passwords are convenient for development only. When seeding a
+    # hosted database, set distinct strong passwords in the service environment.
+    hosted_database = bool(os.environ.get("DATABASE_URL"))
+
+    def seed_password(variable, local_default):
+        value = os.environ.get(variable, "").strip()
+        if value:
+            return value
+        if hosted_database:
+            raise RuntimeError(
+                f"Set {variable} before enabling SEED_DEMO_DATA on a hosted database."
+            )
+        return local_default
+
+    admin_password = seed_password("DEMO_ADMIN_PASSWORD", "admin123")
+    manager_password = seed_password("DEMO_MANAGER_PASSWORD", "manager123")
+    customer_password = seed_password("DEMO_CUSTOMER_PASSWORD", "customer123")
+
+    admin = User(name="System Admin", email=os.environ.get("DEMO_ADMIN_EMAIL", "admin@smartrest.com"), password_hash=generate_password_hash(admin_password), role="admin")
+    manager = User(name="Restaurant Manager", email=os.environ.get("DEMO_MANAGER_EMAIL", "manager@smartrest.com"), password_hash=generate_password_hash(manager_password), role="manager")
+    customer = User(name="Demo Customer", email=os.environ.get("DEMO_CUSTOMER_EMAIL", "customer@smartrest.com"), password_hash=generate_password_hash(customer_password), role="customer")
     db.session.add_all([admin,manager,customer]); db.session.flush()
 
     rests = [
@@ -283,13 +326,15 @@ def seed_data():
                               created_at=datetime.utcnow()-timedelta(days=random.randint(0,120))))
     db.session.commit()
 
- with app.app_context():
-    try:
+with app.app_context():
     db.create_all()
-except Exception as e:
-print("DB initialization info:",e)
+    # Keep the existing local demo experience. A hosted database is seeded only
+    # when explicitly enabled, so a future deploy cannot silently repopulate it.
+    seed_setting = os.environ.get("SEED_DEMO_DATA")
+    if seed_setting is None:
+        seed_setting = "false" if os.environ.get("DATABASE_URL") else "true"
+    if seed_setting.strip().lower() in {"1", "true", "yes", "on"}:
+        seed_data()
 
 if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT",5000))
-    app.run(host="0.0.0.0",port=port)
+    app.run(debug=not bool(database_url), host="0.0.0.0")
